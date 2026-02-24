@@ -3,20 +3,8 @@ import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
 import { books, members, landings } from "./db.js";
 
-
 // Definisikan skema GraphQL (type definitions)
 const typeDefs = `#graphql
-  # Ini adalah skema dasar
-  type Query {
-    books: [Book!]!
-    book(id: ID!): Book
-    
-    members: [Member!]!
-    member(id: ID!): Member
-
-    landings: [Landing]
-    landing(id: ID!): Landing
-  }
 
   type Landing {
     id: ID!
@@ -34,14 +22,48 @@ const typeDefs = `#graphql
     category: String!
     total: Int!
     landings: [Landing]
-    }
-    
+  }
+
   type Member {
     id: ID!
     name: String!
     email: String!
     verified: Boolean!
     landings: [Landing]
+  }
+
+  # --- Input untuk Create/Update ---
+  input BookInput {
+    title: String!
+    author: String!
+    year: Int
+  }
+
+  input MemberInput {
+    name: String!
+    email: String!
+  }
+
+  # Entry point untuk semua query
+  type Query {
+    books: [Book!]!
+    book(id: ID!): Book
+    landings: [Landing]
+    landing(id: ID!): Landing
+
+    members: [Member!]!
+    member(id: ID!): Member
+  }
+
+  # --- Mutation CRUD sederhana ---
+  type Mutation {
+    addBook(input: BookInput!): Book!
+    updateBook(id: ID!, input: BookInput!): Book
+    deleteBook(id: ID!): Boolean!
+
+    addMember(input: MemberInput!): Member!
+    updateMember(id: ID!, input: MemberInput!): Member
+    deleteMember(id: ID!): Boolean!
   }
 `;
 
@@ -78,6 +100,48 @@ const resolvers = {
     },
     member: (parent) => {
       return members.find((member) => member.id === parent.memberId);
+    },
+  },
+
+  Mutation: {
+    // --- CRUD untuk Book ---
+    addBook: (_, { input }) => {
+      const newId = (books.length + 1).toString();
+      const newBook = { id: newId, ...input };
+      books.push(newBook);
+      return newBook;
+    },
+    updateBook: (_, { id, input }) => {
+      const i = books.findIndex((b) => b.id === id);
+      if (i === -1) return null;
+      books[i] = { ...books[i], ...input };
+      return books[i];
+    },
+    deleteBook: (_, { id }) => {
+      const i = books.findIndex((b) => b.id === id);
+      if (i === -1) return false;
+      books.splice(i, 1);
+      return true;
+    },
+
+    // --- CRUD untuk Member ---
+    addMember: (_, { input }) => {
+      const newId = (members.length + 1).toString();
+      const newMember = { id: newId, ...input };
+      members.push(newMember);
+      return newMember;
+    },
+    updateMember: (_, { id, input }) => {
+      const i = members.findIndex((m) => m.id === id);
+      if (i === -1) return null;
+      members[i] = { ...members[i], ...input };
+      return members[i];
+    },
+    deleteMember: (_, { id }) => {
+      const i = members.findIndex((m) => m.id === id);
+      if (i === -1) return false;
+      members.splice(i, 1);
+      return true;
     },
   },
 };
